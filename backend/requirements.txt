@@ -1,0 +1,11 @@
+flask
+flask-cors
+ultralytics
+opencv-python-headless
+scikit-learn
+pandas
+numpy
+joblib
+pillow
+matplotlib
+seaborn
