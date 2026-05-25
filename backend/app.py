@@ -10,6 +10,8 @@ import numpy as np
 from yolo_detector import detect_vehicles_from_image
 from database import init_db, save_prediction, get_history
 from auth import init_auth_db, register_user, login_user
+import tempfile
+from video_processor import process_video
 
 app = Flask(__name__)
 CORS(app)
@@ -166,6 +168,59 @@ def detect_and_predict():
         "annotated_image": draw_boxes(image_bytes, boxes),
         "timestamp":       datetime.now().isoformat()
     })
+
+@app.route("/api/detect-video", methods=["POST"])
+def detect_video():
+    if "file" not in request.files:
+        return jsonify({"error": "File nahi mila"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "Empty file"}), 400
+
+    allowed = {"mp4", "avi", "mov", "mkv", "webm"}
+    ext = file.filename.rsplit(".", 1)[-1].lower()
+    if ext not in allowed:
+        return jsonify({"error": "Sirf MP4/AVI/MOV/MKV allowed hai"}), 400
+
+    # Temp file mein save karo
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+        file.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        avg_count, max_count, frame_results, duration = process_video(tmp_path)
+
+        # Avg count se prediction karo
+        feats = make_features(avg_count)
+        pred  = int(model.predict(feats)[0])
+        proba = model.predict_proba(feats)[0].tolist()
+        conf  = round(max(proba) * 100, 1)
+
+        # DB mein save karo
+        save_prediction(avg_count, CONGESTION_MAP[pred], conf)
+
+        return jsonify({
+            "avg_vehicle_count":  avg_count,
+            "max_vehicle_count":  max_count,
+            "video_duration":     duration,
+            "frames_analyzed":    len(frame_results),
+            "frame_results":      frame_results,
+            "prediction":         CONGESTION_MAP[pred],
+            "level":              pred,
+            "color":              CONGESTION_COLOR[pred],
+            "confidence":         conf,
+            "probabilities": {
+                "low":    round(proba[0] * 100, 1),
+                "medium": round(proba[1] * 100, 1),
+                "high":   round(proba[2] * 100, 1),
+            },
+        })
+    finally:
+        import os
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 @app.route("/api/history")
 def history():

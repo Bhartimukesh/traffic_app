@@ -26,27 +26,27 @@ export default function LoginPage({ onLogin }) {
       if (!username || !email || !password || !confirm)
         return setError("Sab fields bharo!");
       if (password !== confirm)
-        return setError("Passwords match nahi kar rahe!");
+        return setError("Passwords do not match.!");
       if (password.length < 6)
-        return setError("Password kam se kam 6 characters ka hona chahiye!");
+        return setError("Password must be at least 6 characters!");
 
       setLoading(true);
       try {
         const res = await api.post("/register", { username, email, password });
         if (res.data.success) {
-          setSuccess("Account ban gaya! Ab login karo.");
+          setSuccess("Account created successfully! Now log in.");
           setTimeout(() => switchMode("login"), 1500);
         } else {
           setError(res.data.message);
         }
       } catch {
-        setError("Server se connect nahi hua!");
+        setError("Failed to connect to the server!");
       }
       setLoading(false);
 
     } else {
       if (!username || !password)
-        return setError("Username aur password dono bharo!");
+        return setError("Please enter both username and password");
 
       setLoading(true);
       try {
@@ -57,7 +57,7 @@ export default function LoginPage({ onLogin }) {
           setError(res.data.message);
         }
       } catch {
-        setError("Server se connect nahi hua! Flask chalao.");
+        setError("Failed to connect to the server! Run flask");
       }
       setLoading(false);
     }
@@ -119,7 +119,7 @@ export default function LoginPage({ onLogin }) {
               Username
             </label>
             <input
-              type="text" placeholder="apna username likho"
+              type="text" placeholder="Enter your username" 
               value={username}
               onChange={(e) => { setUsername(e.target.value); setError(""); }}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -135,7 +135,7 @@ export default function LoginPage({ onLogin }) {
                 Email
               </label>
               <input
-                type="email" placeholder="apna email likho"
+                type="email" placeholder="Enter your email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(""); }}
                 style={inputStyle}
@@ -150,7 +150,7 @@ export default function LoginPage({ onLogin }) {
               Password
             </label>
             <input
-              type="password" placeholder="password likho (min 6 characters)"
+              type="password" placeholder="Enter your password (min 6 characters)"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(""); }}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -166,7 +166,7 @@ export default function LoginPage({ onLogin }) {
                 Confirm Password
               </label>
               <input
-                type="password" placeholder="password dobara likho"
+                type="password" placeholder="Confirm your password"
                 value={confirm}
                 onChange={(e) => { setConfirm(e.target.value); setError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -213,11 +213,11 @@ export default function LoginPage({ onLogin }) {
 
         {/* Switch mode */}
         <p style={{ textAlign: "center", fontSize: 13, color: "#6b7280", marginTop: 16 }}>
-          {mode === "login" ? "Account nahi hai? " : "Already account exit ? "}
+          {mode === "login" ? "Account does not exist?" : "Already have an account?"}
           <span 
             onClick={() => switchMode(mode === "login" ? "register" : "login")}
             style={{ color: "#6366f1", fontWeight: 600, cursor: "pointer" }}>
-            {mode === "login" ? "Register karo" : "Login karo"}
+            {mode === "login" ? "Register here" : "Login here"}
           </span>
         </p>
 

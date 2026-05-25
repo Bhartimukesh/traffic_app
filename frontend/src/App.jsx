@@ -4,15 +4,28 @@ import Dashboard  from "./components/Dashboard";
 import LoginPage  from "./components/LoginPage";
 import Footer from "./components/Footer";
 import "./App.css";
+import VideoPage from "./components/VideoPage";
 
 export default function App() {
   const [page, setPage]             = useState("home");
-  const [user, setUser]             = useState(null);
+  const [user, setUser] = useState(() => {
+  const saved = localStorage.getItem("traffic_user");
+  return saved ? JSON.parse(saved) : null;
+});
   const [dropdownOpen, setDropdown] = useState(false);
   const dropdownRef                 = useRef(null);
 
-  const handleLogin  = (userData) => { setUser(userData); setPage("home"); };
-  const handleLogout = () => { setUser(null); setPage("home"); setDropdown(false); };
+const handleLogin  = (userData) => { 
+  setUser(userData); 
+  localStorage.setItem("traffic_user", JSON.stringify(userData));
+  setPage("home"); 
+};
+const handleLogout = () => { 
+  setUser(null); 
+  localStorage.removeItem("traffic_user");
+  setPage("home"); 
+  setDropdown(false); 
+};
 
   useEffect(() => {
     const handler = (e) => {
@@ -43,7 +56,8 @@ export default function App() {
         <div className="navbar-links">
           {[
             { id: "home",      label: "Home"      },
-            { id: "upload",    label: "Upload"    },
+            { id: "upload",    label: "Image  Upload"    },
+            { id: "video", label: "Video" },
             { id: "dashboard", label: "Dashboard" },
           ].map(({ id, label }) => (
             <button
@@ -85,18 +99,22 @@ export default function App() {
                   </button>
                   <button className="dropdown-item"
                     onClick={() => { setPage("upload"); setDropdown(false); }}>
-                    <span className="dropdown-item-icon">📷</span> Upload Photo
+                    <span className="dropdown-item-icon">📷</span> ImageUpload
                   </button>
                   <button className="dropdown-item"
                     onClick={() => { setPage("dashboard"); setDropdown(false); }}>
                     <span className="dropdown-item-icon">📊</span> Dashboard
                   </button>
-
+                   <button className="dropdown-item"
+                        onClick={() => { setPage("video"); setDropdown(false); }}>
+                     <span className="dropdown-item-icon">🎥</span> Video Analysis
+                  </button>
                   <div className="dropdown-divider" />
 
                   <button className="dropdown-item danger" onClick={handleLogout}>
                     <span className="dropdown-item-icon">🚪</span> Sign out
                   </button>
+
                 </div>
 
                 <div className="dropdown-footer">
@@ -115,78 +133,81 @@ export default function App() {
           {/* Hero Section */}
           <div className="home-hero">
             <div className="home-badge">
-              🤖 AI Powered — YOLOv8s + Random Forest
+               AI Powered — YOLOv8s + Random Forest
             </div>
             <h1 className="home-title">
               Predict Traffic<br />
               <span>Congestion with AI</span>
             </h1>
             <p className="home-desc">
-              Road ki photo upload karo — YOLO vehicles detect karega
-              aur Random Forest real-time congestion level predict karega.
+            Upload traffic congestion images and videos — YOLO will detect vehicles, 
+            and a Random Forest model will predict the traffic congestion level.
             </p>
-            <div className="home-btns">
-              <button className="home-btn-primary"
-                onClick={() => setPage("upload")}>
-                📷 Upload Photo
-              </button>
-              <button className="home-btn-secondary"
-                onClick={() => setPage("dashboard")}>
-                📊 View Dashboard
-              </button>
-            </div>
-            <div className="home-stats">
-              {[
-                { value: "100%",    label: "Model Accuracy"   },
-                { value: "YOLOv8s", label: "Detection Model"  },
-                { value: "3000+",   label: "Training Samples" },
-                { value: "3",       label: "Congestion Levels" },
-              ].map(({ value, label }) => (
-                <div className="home-stat" key={label}>
-                  <div className="home-stat-value">{value}</div>
-                  <div className="home-stat-label">{label}</div>
-                </div>
-              ))}
-            </div>
+<div className="home-btns">
+  <button className="home-btn-primary"
+    onClick={() => setPage("upload")}>
+    📷 Upload Photo
+  </button>
+  <button className="home-btn-primary"
+    onClick={() => setPage("video")}>
+    🎥 Upload Video
+  </button>
+  <button className="home-btn-secondary"
+    onClick={() => setPage("dashboard")}>
+    📊 View Dashboard
+  </button>
+</div>
+<div className="hero-stats" style={{ justifyContent: "center", width: "100%" }}>
+  {[
+    { value: "100%",    label: "Accuracy"         },
+    { value: "YOLOv8s", label: "Detection Model"  },
+    { value: "3000+",   label: "Training Samples" },
+  ].map(({ value, label }) => (
+    <div key={label} style={{ textAlign: "center" }}>
+      <div className="hero-stat-value">{value}</div>
+      <div className="hero-stat-label">{label}</div>
+    </div>
+  ))}
+</div>
           </div>
 
           {/* Features Section */}
           <div className="home-features">
             <h2 className="home-features-title">How It Works</h2>
             <p className="home-features-sub">
-              3 simple steps mein congestion predict karo
+              Simple steps for congestion prediction
             </p>
             <div className="features-grid">
               {[
                 {
                   icon:  "📷",
-                  title: "Upload Photo",
-                  desc:  "Kisi bhi road ya highway ki photo upload karo. JPG, PNG, WEBP supported hai."
+                  title: "Upload Photo, Video",
+                  desc:  "Upload any traffic photo and video from road or highway. JPG, PNG, WEBP formats are supported."
                 },
                 {
                   icon:  "🔍",
                   title: "YOLO Detection",
-                  desc:  "YOLOv8s model photo mein cars, buses, trucks aur motorcycles detect karta hai."
+                  desc:  "YOLOv8s model detects cars, buses, trucks, and motorcycles in images and videos."
                 },
                 {
                   icon:  "🤖",
                   title: "AI Prediction",
-                  desc:  "Random Forest algorithm vehicle count se Low, Medium ya High congestion predict karta hai."
+                  desc:  "Random Forest algorithm predicts Low, Medium, or High congestion levels based on the vehicle count."
                 },
                 {
                   icon:  "📊",
                   title: "Analytics",
-                  desc:  "Dashboard mein sabhi predictions ka history aur trends dekho."
+                  desc:  "View the history and trends of all predictions on the dashboard."
                 },
                 {
                   icon:  "💾",
                   title: "Database",
-                  desc:  "Har prediction SQLite database mein save hoti hai future reference ke liye."
+                  desc:  "All predictions are saved in a SQLite database for future reference."
                 },
                 {
                   icon:  "⚡",
                   title: "Real-time",
-                  desc:  "Fast processing — seconds mein accurate congestion prediction milti hai."
+                  desc:  "Fast processing — get accurate congestion predictions within seconds."
                 },
               ].map(({ icon, title, desc }) => (
                 <div className="feature-card" key={title}>
@@ -208,10 +229,10 @@ export default function App() {
           <div className="hero-banner">
             <div className="hero-badge">🤖 YOLOv8s + Random Forest</div>
             <h1 className="hero-title">
-              Photo Upload &<br /><span>Detection</span>
+              ImageUpload &<br /><span>Detection</span>
             </h1>
             <p className="hero-desc">
-              Traffic photo upload karo — AI vehicles detect karega aur congestion predict karega
+              Upload a traffic photo — AI will detect vehicles, and predict congestion levels
             </p>
             <div className="hero-stats">
               {[
@@ -233,17 +254,40 @@ export default function App() {
       )}
 
       {/* ── DASHBOARD PAGE ── */}
-      {page === "dashboard" && (
-        <>
-          <div className="dashboard-banner">
-            <h1>📊 Analytics Dashboard</h1>
-            <p>Ab tak ki sabhi predictions ka overview aur trends</p>
-          </div>
-          <div className="page-content">
-            <Dashboard />
-          </div>
-        </>
-      )}
+{page === "dashboard" && (
+  <>
+    <div className="hero-banner">
+      <div className="hero-badge">📊 Real-time Analytics</div>
+      <h1 className="hero-title">
+        Analytics <span>Dashboard</span>
+      </h1>
+      <p className="hero-desc">
+        Ab tak ki sabhi predictions ka overview, trends aur history
+      </p>
+    </div>
+    <div className="page-content">
+      <Dashboard />
+    </div>
+  </>
+)}
+
+      {/* ── VIDEO PAGE ── */}
+{page === "video" && (
+  <>
+    <div className="hero-banner">
+      <div className="hero-badge">🎥 Video Analysis</div>
+      <h1 className="hero-title">
+        Video Upload &<br /><span>Analysis</span>
+      </h1>
+      <p className="hero-desc">
+        Upload a traffic video — AI will analyze each frame
+      </p>
+    </div>
+    <div className="page-content">
+      <VideoPage />
+    </div>
+  </>
+)}
 
     </div>
   );

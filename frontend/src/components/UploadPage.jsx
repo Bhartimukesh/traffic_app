@@ -8,9 +8,9 @@ const LEVEL_STYLE = {
 };
 
 const RECOMMENDATIONS = {
-  Low:    "✅ Traffic normal hai. Safar ke liye accha samay hai.",
-  Medium: "⚠️ Thodi bheed hai. Alternate route consider karo. 10-15 min extra lag sakta hai.",
-  High:   "🚨 Heavy congestion! Is route ko avoid karo. 30-45 min delay expected hai.",
+  Low:    "✅ Traffic is normal. It is a good time to travel.",
+  Medium: "⚠️ There is some traffic. Consider an alternate route. 10-15 minutes extra time may be expected.",
+  High:   "🚨 Heavy congestion! Avoid this route. 30-45 minutes delay expected.",
 };
 
 const TIPS = {
@@ -42,7 +42,7 @@ export default function UploadPage() {
   };
 
   const handleSubmit = async () => {
-    if (!file) return setError("Pehle ek photo select karo.");
+    if (!file) return setError("Please select a photo first.");
     setLoading(true);
     setError("");
     const form = new FormData();
@@ -52,7 +52,7 @@ export default function UploadPage() {
       setResult(res.data);
       setShowAnnotated(true);
     } catch (err) {
-      setError(err.response?.data?.error || "Backend se connect nahi hua. Flask server chalao.");
+      setError(err.response?.data?.error || "Failed to connect to the backend. Please run the Flask server.");
     }
     setLoading(false);
   };
@@ -67,7 +67,7 @@ export default function UploadPage() {
         Photo Upload & Detection
       </h2>
       <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 24 }}>
-        Traffic photo upload karo — YOLO vehicles detect karega, AI congestion predict karega
+        Upload a traffic photo — YOLO will detect vehicles, and AI will predict congestion levels
       </p>
 
       {/* ── TOP ROW — Upload + Button ── */}
@@ -101,7 +101,7 @@ export default function UploadPage() {
             <>
               <p style={{ fontSize: 40, margin: 0 }}>📷</p>
               <p style={{ fontWeight: 600, marginTop: 10, marginBottom: 4 }}>
-                Photo yahan drop karo ya click karo
+                Drop a photo here or click to upload
               </p>
               <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>
                 JPG, PNG, WEBP supported
@@ -132,10 +132,10 @@ export default function UploadPage() {
               ⚙️ How it works
             </p>
             {[
-              ["1️⃣", "Photo upload karo"],
-              ["2️⃣", "YOLOv8s vehicles detect karta hai"],
-              ["3️⃣", "Random Forest congestion predict karta hai"],
-              ["4️⃣", "Result + annotated image milta hai"],
+              ["1️⃣", "Upload traffic photo here"],
+              ["2️⃣", "YOLOv8s detects vehicles"],
+              ["3️⃣", "Random Forest predicts congestion"],
+              ["4️⃣", "View results and annotated image"],
             ].map(([icon, text]) => (
               <div key={text} style={{ display: "flex", gap: 8, marginBottom: 8, color: "#374151" }}>
                 <span>{icon}</span><span>{text}</span>
