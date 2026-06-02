@@ -17,6 +17,11 @@ from database import (init_db, save_prediction, get_history,
                       update_route_cleared)
 from yolo_detector import detect_vehicles_from_image
 from signal_timing import calculate_green_time, calculate_phase_timing, get_signal_schedule
+from accident_detector import detect_accidents, draw_accident_boxes
+from database import (init_db, save_prediction, get_history,
+                      save_emergency_alert, get_emergency_alerts,
+                      update_route_cleared, save_accident_alert,
+                      get_accident_alerts, resolve_accident)
 
 app = Flask(__name__)
 CORS(app)
@@ -323,7 +328,68 @@ def signal_from_image():
             "✅ Reduce green — light traffic",
     })
 
+@app.route("/api/accident/detect", methods=["POST"])
+def detect_accident():
+    if "file" not in request.files:
+        return jsonify({"error": "File nahi mila"}), 400
+
+    file          = request.files["file"]
+    location_name = request.form.get("location_name", "Unknown Location")
+    image_bytes   = file.read()
+
+    # YOLO detection
+    count, boxes, type_counts, ambulance_detected = detect_vehicles_from_image(image_bytes)
+
+    # Accident detection
+    accidents, severity, accident_ids = detect_accidents(boxes)
+
+    # Annotated image with accident highlights
+    annotated = draw_accident_boxes(image_bytes, boxes, accidents, set(accident_ids))
+
+    # Save accident alerts to DB
+    saved_alerts = []
+    for accident in accidents:
+        alert_id = save_accident_alert(
+            location_name,
+            accident["type"],
+            accident["severity"],
+            count,
+            accident["description"]
+        )
+        saved_alerts.append(alert_id)
+
+    # Normal prediction bhi save karo
+    if count > 50:  level = "High"
+    elif count > 20: level = "Medium"
+    else:            level = "Low"
+    save_prediction(count, level, 90.0)
+
+    return jsonify({
+        "vehicle_count":    count,
+        "vehicle_breakdown": type_counts,
+        "accidents":        accidents,
+        "accident_count":   len(accidents),
+        "severity":         severity,
+        "accident_ids":     accident_ids,
+        "annotated_image":  annotated,
+        "ambulance_detected": ambulance_detected,
+        "has_accident":     len(accidents) > 0,
+        "timestamp":        datetime.now().isoformat(),
+        "location_name":    location_name,
+    })
+
+
+@app.route("/api/accident/alerts", methods=["GET"])
+def accident_alerts():
+    return jsonify(get_accident_alerts())
+
+
+@app.route("/api/accident/resolve/<int:alert_id>", methods=["POST"])
+def resolve_accident_alert(alert_id):
+    resolve_accident(alert_id)
+    return jsonify({"success": True})
 @app.route("/api/history")
+
 def history():
     return jsonify(get_history())
 

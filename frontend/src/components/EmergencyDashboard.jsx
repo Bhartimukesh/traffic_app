@@ -89,17 +89,17 @@ export default function EmergencyDashboard() {
       {/* No active alerts */}
       {!loading && alerts.filter(a => !a.route_cleared).length === 0 && (
         <div className="emergency-normal-banner">
-          <p>✅ Koi active emergency nahi — Traffic normal chal raha hai</p>
+          <p>✅ No active emergencies</p>
         </div>
       )}
 
       {/* How it works */}
       <div className="emergency-how-row">
         {[
-          { icon: "📸", title: "Image Upload",    desc: "Traffic photo upload karo — YOLO analyze karega" },
-          { icon: "🚑", title: "Auto Detection",  desc: "Ambulance detect hote hi system alert karta hai" },
-          { icon: "🟢", title: "Signal Green",    desc: "Detected route ka signal automatically green hoga" },
-          { icon: "🛣️", title: "Route Clear",     desc: "Traffic operators route clear kar sakte hain" },
+          { icon: "📸", title: "Image Upload",    desc: "Upload a photo of the emergency vehicle" },
+          { icon: "🚑", title: "Auto Detection",  desc: "Ambulance detection triggers system alert" },
+          { icon: "🟢", title: "Signal Green",    desc: "Detected route automatically sets signal to green" },
+          { icon: "🛣️", title: "Route Clear",     desc: "Traffic operators can clear routes" },
         ].map(({ icon, title, desc }) => (
           <div key={title} className="emergency-how-card">
             <p className="emergency-how-icon">{icon}</p>
@@ -125,9 +125,9 @@ export default function EmergencyDashboard() {
         ) : alerts.length === 0 ? (
           <div className="emergency-empty">
             <p style={{ fontSize: 32 }}>🚑</p>
-            <p>Abhi koi emergency alert nahi</p>
+            <p>No active emergencies</p>
             <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
-              Image Upload pe jaao aur ambulance wali photo upload karo
+              Go to Image Upload and upload a photo of the emergency vehicle
             </p>
           </div>
         ) : (

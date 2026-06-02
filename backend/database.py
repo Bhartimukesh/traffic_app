@@ -27,6 +27,19 @@ def init_db():
             timestamp        TEXT
         )
     """)
+    # Accident alerts table
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS accident_alerts (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        location_name    TEXT,
+        accident_type    TEXT,
+        severity         TEXT,
+        vehicle_count    INTEGER,
+        description      TEXT,
+        status           TEXT DEFAULT 'Active',
+        timestamp        TEXT
+        )
+      """)
     conn.commit()
     conn.close()
 
@@ -76,6 +89,48 @@ def get_emergency_alerts(limit=20):
         "route_cleared":   bool(r[5]),
         "timestamp":       r[6]
     } for r in rows]
+
+def save_accident_alert(location_name, accident_type, severity, vehicle_count, description):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO accident_alerts
+        (location_name, accident_type, severity, vehicle_count, description, status, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (location_name, accident_type, severity, vehicle_count,
+          description, "Active", datetime.now().isoformat()))
+    alert_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return alert_id
+
+def get_accident_alerts(limit=30):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, location_name, accident_type, severity,
+               vehicle_count, description, status, timestamp
+        FROM accident_alerts ORDER BY id DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return [{
+        "id":            r[0],
+        "location_name": r[1],
+        "accident_type": r[2],
+        "severity":      r[3],
+        "vehicle_count": r[4],
+        "description":   r[5],
+        "status":        r[6],
+        "timestamp":     r[7]
+    } for r in rows]
+
+def resolve_accident(alert_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE accident_alerts SET status = 'Resolved' WHERE id = ?", (alert_id,))
+    conn.commit()
+    conn.close()
 
 def update_route_cleared(alert_id, cleared):
     conn = sqlite3.connect(DB_PATH)

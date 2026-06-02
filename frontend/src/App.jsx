@@ -7,6 +7,8 @@ import "./App.css";
 import VideoPage from "./components/VideoPage";
 import EmergencyDashboard from "./components/EmergencyDashboard";
 import SignalTimingPage from "./components/SignalTimingPage";
+import InteractiveMap from "./components/InteractiveMap";
+import AccidentDetection from "./components/AccidentDetection";
 
 export default function App() {
   const [page, setPage]             = useState("home");
@@ -63,6 +65,8 @@ const handleLogout = () => {
             { id: "dashboard", label: "Dashboard" },
             { id: "signal", label: "🚦 Signal" },
             { id: "emergency", label: "🚨 Emergency" },
+            { id: "imap", label: "🗺️ Live Map" },
+            { id: "accident", label: "💥 Accident" },
           ].map(({ id, label }) => (
             <button
               key={id}
@@ -274,7 +278,7 @@ const handleLogout = () => {
         Analytics <span>Dashboard</span>
       </h1>
       <p className="hero-desc">
-        Ab tak ki sabhi predictions ka overview, trends aur history
+        View all your predictions in one place — stats, charts, and history
       </p>
     </div>
     <div className="page-content">
@@ -310,7 +314,7 @@ const handleLogout = () => {
         Ambulance Priority<br /><span>& Signal Control</span>
       </h1>
       <p className="hero-desc">
-        Ambulance detect hote hi signal automatically green — route clearance dashboard
+        Real-time emergency vehicle detection — Traffic signals automatically switch to GREEN mode to clear the route
       </p>
     </div>
     <div className="page-content">
@@ -329,12 +333,48 @@ const handleLogout = () => {
         Dynamic Signal<br /><span>Timing System</span>
       </h1>
       <p className="hero-desc">
-        Vehicle count ke hisaab se green time automatically adjust hota hai —
-        High traffic = zyada green, Low traffic = kam green
+        AI-powered traffic signal timing optimization — Reduce congestion and improve traffic flow in real-time
       </p>
     </div>
     <div className="page-content">
       <SignalTimingPage />
+    </div>
+  </>
+)}
+
+{page === "imap" && (
+  <>
+    <div className="hero-banner">
+      <div className="hero-badge">🗺️ OpenStreetMap + Leaflet</div>
+      <h1 className="hero-title">
+        Interactive Traffic<br /><span>Map View</span>
+      </h1>
+      <p className="hero-desc">
+        Junction locations · Traffic status · Congestion hotspots — real-time color coded
+      </p>
+    </div>
+    <div className="page-content">
+      <InteractiveMap />
+    </div>
+  </>
+)}
+
+{page === "accident" && (
+  <>
+    <div className="hero-banner" style={{
+      background: "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)"
+    }}>
+      <div className="hero-badge">🚗💥 AI Accident Detection</div>
+      <h1 className="hero-title">
+        Accident Detection<br /><span>& Alert System</span>
+      </h1>
+      <p className="hero-desc">
+        YOLO se collision, overturned vehicle aur pile-up detect karo —
+        real-time dashboard alerts
+      </p>
+    </div>
+    <div className="page-content">
+      <AccidentDetection />
     </div>
   </>
 )}
