@@ -13,7 +13,9 @@ VEHICLE_CLASSES = {
 }
 
 def detect_vehicles_from_image(image_source):
+    original_bytes = None
     if isinstance(image_source, bytes):
+        original_bytes = image_source
         image = Image.open(io.BytesIO(image_source)).convert("RGB")
         orig_w, orig_h = image.size
         if orig_w < 1920:
@@ -25,7 +27,7 @@ def detect_vehicles_from_image(image_source):
     h, w = image_source.shape[:2]
     all_boxes = []
 
-    # Pass 1 — full image — sabhi vehicles
+    # Pass 1 — full image
     results1 = model(
         image_source,
         verbose=False,
@@ -43,10 +45,11 @@ def detect_vehicles_from_image(image_source):
                 all_boxes.append({
                     "vehicle_type": VEHICLE_CLASSES[class_id],
                     "confidence":   round(float(box.conf[0]), 2),
-                    "bbox":         [x1, y1, x2, y2]
+                    "bbox":         [x1, y1, x2, y2],
+                    "is_emergency": False
                 })
 
-    # Pass 2 — upar wala half crop — door ki gaadiyaan
+    # Pass 2 — top half
     top_half = image_source[:h//2, :]
     results2 = model(
         top_half,
@@ -65,18 +68,69 @@ def detect_vehicles_from_image(image_source):
                 all_boxes.append({
                     "vehicle_type": VEHICLE_CLASSES[class_id],
                     "confidence":   round(float(box.conf[0]), 2),
-                    "bbox":         [x1, y1, x2, y2]
+                    "bbox":         [x1, y1, x2, y2],
+                    "is_emergency": False
                 })
 
-    # Sirf exact same boxes hatao — 0.85 threshold
     final_boxes = remove_duplicates(all_boxes, overlap_thresh=0.85)
 
+    # ── AMBULANCE DETECTION ──────────────────────────
+    ambulance_detected = False
+
+    for box in final_boxes:
+        # Sirf bus aur truck ko check karo — ambulance inhi mein aata hai
+        if box["vehicle_type"] not in ["bus", "truck"]:
+            continue
+
+        x1, y1, x2, y2 = [int(v) for v in box["bbox"]]
+
+        try:
+            # Image crop karo is vehicle ka
+            crop = image_source[
+                max(0, y1):min(h, y2),
+                max(0, x1):min(w, x2)
+            ]
+
+            if crop.size == 0 or crop.shape[0] < 5 or crop.shape[1] < 5:
+                continue
+
+            # White pixel ratio check karo
+            # Ambulance mostly white hoti hai
+            r, g, b = crop[:,:,0], crop[:,:,1], crop[:,:,2]
+            white_pixels = ((r > 190) & (g > 190) & (b > 190)).sum()
+            total_pixels = crop.shape[0] * crop.shape[1]
+            white_ratio  = white_pixels / total_pixels
+
+            # Red cross check karo (ambulance pe red cross hota hai)
+            red_pixels = (
+                (r > 180) & (g < 80) & (b < 80)
+            ).sum()
+            red_ratio = red_pixels / total_pixels
+
+            # Ambulance condition:
+            # White > 40% aur thoda red bhi ho
+            # Ya white > 55% (pure white ambulance)
+            is_ambulance = (
+                (white_ratio > 0.40 and red_ratio > 0.02) or
+                (white_ratio > 0.55)
+            )
+
+            if is_ambulance:
+                box["vehicle_type"] = "ambulance"
+                box["is_emergency"] = True
+                ambulance_detected  = True
+
+        except Exception:
+            continue
+    # ─────────────────────────────────────────────────
+
+    # Vehicle type counts
     type_counts = {}
     for box in final_boxes:
         t = box["vehicle_type"]
         type_counts[t] = type_counts.get(t, 0) + 1
 
-    return len(final_boxes), final_boxes, type_counts
+    return len(final_boxes), final_boxes, type_counts, ambulance_detected
 
 
 def remove_duplicates(boxes, overlap_thresh=0.85):
@@ -102,7 +156,7 @@ def remove_duplicates(boxes, overlap_thresh=0.85):
                 area1 = (x2 - x1) * (y2 - y1)
                 area2 = (ex2 - ex1) * (ey2 - ey1)
                 union = area1 + area2 - intersection
-                iou = intersection / union if union > 0 else 0
+                iou   = intersection / union if union > 0 else 0
                 if iou > overlap_thresh:
                     is_duplicate = True
                     break

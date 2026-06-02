@@ -12,6 +12,11 @@ from database import init_db, save_prediction, get_history
 from auth import init_auth_db, register_user, login_user
 import tempfile
 from video_processor import process_video
+from database import (init_db, save_prediction, get_history,
+                      save_emergency_alert, get_emergency_alerts,
+                      update_route_cleared)
+from yolo_detector import detect_vehicles_from_image
+from signal_timing import calculate_green_time, calculate_phase_timing, get_signal_schedule
 
 app = Flask(__name__)
 CORS(app)
@@ -72,7 +77,16 @@ def draw_boxes(image_bytes, boxes):
         label = f'{b["vehicle_type"][0].upper()} {int(b["confidence"]*100)}%'
 
         # Box draw karo
+        width = 5 if b.get("is_emergency") else 3
         draw.rectangle([x1, y1, x2, y2], outline=col, width=width)
+
+        # Ambulance ke liye blink effect (double border)
+        if b.get("is_emergency"):
+            draw.rectangle(
+                [x1-3, y1-3, x2+3, y2+3],
+                outline="#ffffff", width=2
+            )
+            label = f'🚑 AMBULANCE {int(b["confidence"]*100)}%'
 
         # Label background
         text_x = x1
@@ -130,7 +144,6 @@ def detect_and_predict():
         return jsonify({"error": "File nahi mila"}), 400
 
     file = request.files["file"]
-
     if file.filename == "":
         return jsonify({"error": "Empty file"}), 400
 
@@ -139,10 +152,11 @@ def detect_and_predict():
     if ext not in allowed:
         return jsonify({"error": "Sirf JPG/PNG/WEBP allowed hai"}), 400
 
-    image_bytes = file.read()
+    image_bytes  = file.read()
+    location_name = request.form.get("location_name", "Unknown Location")
 
-    # YOLO detection
-    count, boxes, type_counts = detect_vehicles_from_image(image_bytes)
+    # YOLO detection — ambulance bhi check hoga
+    count, boxes, type_counts, ambulance_detected = detect_vehicles_from_image(image_bytes)
 
     # ML prediction
     feats = make_features(count)
@@ -150,24 +164,46 @@ def detect_and_predict():
     proba = model.predict_proba(feats)[0].tolist()
     conf  = round(max(proba) * 100, 1)
 
-    # DB mein save karo
     save_prediction(count, CONGESTION_MAP[pred], conf)
 
+    # Emergency alert save karo
+    alert_id = None
+    if ambulance_detected:
+        alert_id = save_emergency_alert(location_name, count, CONGESTION_MAP[pred])
+
     return jsonify({
-        "vehicle_count":     count,
-        "vehicle_breakdown": type_counts,
-        "prediction":        CONGESTION_MAP[pred],
-        "level":             pred,
-        "color":             CONGESTION_COLOR[pred],
-        "confidence":        conf,
+        "vehicle_count":      count,
+        "vehicle_breakdown":  type_counts,
+        "prediction":         CONGESTION_MAP[pred],
+        "level":              pred,
+        "color":              CONGESTION_COLOR[pred],
+        "confidence":         conf,
         "probabilities": {
             "low":    round(proba[0] * 100, 1),
             "medium": round(proba[1] * 100, 1),
             "high":   round(proba[2] * 100, 1),
         },
-        "annotated_image": draw_boxes(image_bytes, boxes),
-        "timestamp":       datetime.now().isoformat()
+        "annotated_image":    draw_boxes(image_bytes, boxes),
+        "timestamp":          datetime.now().isoformat(),
+        # Emergency data
+        "ambulance_detected": ambulance_detected,
+        "emergency_alert": {
+            "id":             alert_id,
+            "signal_status":  "GREEN" if ambulance_detected else "NORMAL",
+            "message":        "🚑 AMBULANCE DETECTED — Signal GREEN kiya gaya!" if ambulance_detected else None,
+        } if ambulance_detected else None
     })
+
+
+@app.route("/api/emergency/alerts", methods=["GET"])
+def emergency_alerts():
+    return jsonify(get_emergency_alerts())
+
+
+@app.route("/api/emergency/clear-route/<int:alert_id>", methods=["POST"])
+def clear_route(alert_id):
+    update_route_cleared(alert_id, True)
+    return jsonify({"success": True, "message": "Route cleared!"})
 
 @app.route("/api/detect-video", methods=["POST"])
 def detect_video():
@@ -221,6 +257,71 @@ def detect_video():
         import os
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+@app.route("/api/signal/calculate", methods=["POST"])
+def calculate_signal():
+    """
+    Multiple lanes ka dynamic timing calculate karo
+    Body: {"lanes": [{"name": "Lane A", "vehicle_count": 80}, ...]}
+    """
+    data  = request.json
+    lanes = data.get("lanes", [])
+
+    if not lanes:
+        return jsonify({"error": "Lanes data nahi mila"}), 400
+
+    timing   = calculate_phase_timing(lanes)
+    schedule = get_signal_schedule(lanes)
+
+    return jsonify({
+        "timing":   timing,
+        "schedule": schedule,
+        "total_vehicles": sum(l["vehicle_count"] for l in lanes),
+        "total_cycle":    sum(t["green_time"] + 3 for t in timing),
+    })
+
+
+@app.route("/api/signal/from-image", methods=["POST"])
+def signal_from_image():
+    """
+    Image upload karo → YOLO count karo → Signal timing calculate karo
+    """
+    if "file" not in request.files:
+        return jsonify({"error": "File nahi mila"}), 400
+
+    file        = request.files["file"]
+    lane_name   = request.form.get("lane_name", "Lane A")
+    image_bytes = file.read()
+
+    count, boxes, type_counts, ambulance_detected = detect_vehicles_from_image(image_bytes)
+
+    # Single lane timing
+    green_time = calculate_green_time(count)
+
+    if count > 50:
+        level = "High"
+    elif count > 20:
+        level = "Medium"
+    else:
+        level = "Low"
+
+    save_prediction(count, level, 95.0)
+
+    return jsonify({
+        "lane_name":          lane_name,
+        "vehicle_count":      count,
+        "vehicle_breakdown":  type_counts,
+        "green_time":         green_time,
+        "red_time":           BASE_GREEN if False else 30,
+        "yellow_time":        3,
+        "level":              level,
+        "annotated_image":    draw_boxes(image_bytes, boxes),
+        "ambulance_detected": ambulance_detected,
+        "recommendation":
+            "🚨 Extend green — heavy congestion" if count > 60 else
+            "⚠️ Normal green — moderate traffic" if count > 30 else
+            "✅ Reduce green — light traffic",
+    })
 
 @app.route("/api/history")
 def history():

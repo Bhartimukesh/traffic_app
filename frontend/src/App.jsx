@@ -5,6 +5,8 @@ import LoginPage  from "./components/LoginPage";
 import Footer from "./components/Footer";
 import "./App.css";
 import VideoPage from "./components/VideoPage";
+import EmergencyDashboard from "./components/EmergencyDashboard";
+import SignalTimingPage from "./components/SignalTimingPage";
 
 export default function App() {
   const [page, setPage]             = useState("home");
@@ -59,6 +61,8 @@ const handleLogout = () => {
             { id: "upload",    label: "Image  Upload"    },
             { id: "video", label: "Video" },
             { id: "dashboard", label: "Dashboard" },
+            { id: "signal", label: "🚦 Signal" },
+            { id: "emergency", label: "🚨 Emergency" },
           ].map(({ id, label }) => (
             <button
               key={id}
@@ -109,11 +113,19 @@ const handleLogout = () => {
                         onClick={() => { setPage("video"); setDropdown(false); }}>
                      <span className="dropdown-item-icon">🎥</span> Video Analysis
                   </button>
+                  <button className="dropdown-item"
+                            onClick={() => { setPage("emergency"); setDropdown(false); }}>
+                      <span className="dropdown-item-icon">🚨</span> Emergency System
+                   </button>
                   <div className="dropdown-divider" />
 
                   <button className="dropdown-item danger" onClick={handleLogout}>
                     <span className="dropdown-item-icon">🚪</span> Sign out
                   </button>
+                  <button className="dropdown-item"
+                      onClick={() => { setPage("signal"); setDropdown(false); }}>
+                    <span className="dropdown-item-icon">🚦</span> Signal Timing
+                       </button>
 
                 </div>
 
@@ -285,6 +297,44 @@ const handleLogout = () => {
     </div>
     <div className="page-content">
       <VideoPage />
+    </div>
+  </>
+)}
+{page === "emergency" && (
+  <>
+    <div className="hero-banner" style={{
+      background: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)"
+    }}>
+      <div className="hero-badge">🚑 Life Safety System</div>
+      <h1 className="hero-title">
+        Ambulance Priority<br /><span>& Signal Control</span>
+      </h1>
+      <p className="hero-desc">
+        Ambulance detect hote hi signal automatically green — route clearance dashboard
+      </p>
+    </div>
+    <div className="page-content">
+      <EmergencyDashboard />
+    </div>
+  </>
+)}
+
+{page === "signal" && (
+  <>
+    <div className="hero-banner" style={{
+      background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)"
+    }}>
+      <div className="hero-badge">🚦 Smart City Feature</div>
+      <h1 className="hero-title">
+        Dynamic Signal<br /><span>Timing System</span>
+      </h1>
+      <p className="hero-desc">
+        Vehicle count ke hisaab se green time automatically adjust hota hai —
+        High traffic = zyada green, Low traffic = kam green
+      </p>
+    </div>
+    <div className="page-content">
+      <SignalTimingPage />
     </div>
   </>
 )}
